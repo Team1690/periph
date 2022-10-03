@@ -174,7 +174,7 @@ func (d *Dev) Sense(ledDrive physic.ElectricCurrent, senseTime time.Duration) (S
 	} else {
 		select {
 		// WaitForSensor is time.After().
-		case <-waitForSensor(integration * 2):
+		case <-waitForSensor(integration * 1):
 			if err := d.pollDataReady(ctx); err != nil {
 				return Spectrum{}, err
 			}
@@ -189,9 +189,9 @@ func (d *Dev) Sense(ledDrive physic.ElectricCurrent, senseTime time.Duration) (S
 	}
 
 	raw := make([]byte, 12)
-	if err := d.readVirtualRegister(ctx, rawBase, raw); err != nil {
+	/*if err := d.readVirtualRegister(ctx, rawBase, raw); err != nil {
 		return Spectrum{}, err
-	}
+	}*/
 
 	cal := make([]byte, 24)
 	if err := d.readVirtualRegister(ctx, calBase, cal); err != nil {
@@ -212,11 +212,11 @@ func (d *Dev) Sense(ledDrive physic.ElectricCurrent, senseTime time.Duration) (S
 	ocal := float64(math.Float32frombits(binary.BigEndian.Uint32(cal[16:20])))
 	rcal := float64(math.Float32frombits(binary.BigEndian.Uint32(cal[20:24])))
 
-	traw := make([]byte, 1)
-	if err := d.readVirtualRegister(ctx, deviceTemperatureReg, traw); err != nil {
+	//traw := make([]byte, 1)
+	/*if err := d.readVirtualRegister(ctx, deviceTemperatureReg, traw); err != nil {
 		return Spectrum{}, err
-	}
-	temperature := physic.Temperature(int8(traw[0]))*physic.Kelvin + physic.ZeroCelsius
+	}*/
+	//temperature := physic.Temperature(int8(traw[0]))*physic.Kelvin + physic.ZeroCelsius
 	return Spectrum{
 		Bands: []Band{
 			{Wavelength: 450 * physic.NanoMetre, Counts: v, Value: vcal, Name: "V"},
@@ -226,7 +226,7 @@ func (d *Dev) Sense(ledDrive physic.ElectricCurrent, senseTime time.Duration) (S
 			{Wavelength: 600 * physic.NanoMetre, Counts: o, Value: ocal, Name: "O"},
 			{Wavelength: 650 * physic.NanoMetre, Counts: r, Value: rcal, Name: "R"},
 		},
-		SensorTemperature: temperature,
+		//SensorTemperature: temperature,
 		Gain:              d.gain,
 		LedDrive:          drive,
 		Integration:       integration,
@@ -311,6 +311,8 @@ func (d *Dev) writeVirtualRegister(ctx context.Context, register, data byte) err
 		return err
 	}
 
+	time.Sleep(time.Microsecond*200)
+
 	// Set virtual register that is being written to.
 	if err := d.c.Tx([]byte{writeReg, register | 0x80}, nil); err != nil {
 		return &IOError{"setting virtual register", err}
@@ -320,6 +322,7 @@ func (d *Dev) writeVirtualRegister(ctx context.Context, register, data byte) err
 	if err := d.pollStatus(ctx, writing); err != nil {
 		return err
 	}
+	time.Sleep(time.Microsecond*200)
 
 	// Write data to register that is being written to.
 	if err := d.c.Tx([]byte{writeReg, data}, nil); err != nil {
@@ -340,11 +343,16 @@ func (d *Dev) readVirtualRegister(ctx context.Context, register byte, data []byt
 		if err := d.pollStatus(ctx, clearBuffer); err != nil {
 			return err
 		}
+		//time.Sleep(time.Millisecond*2)
+		//time.Sleep(time.Microsecond*200)
 
 		// Set virtual register that is being read from plus offset.
 		if err := d.c.Tx([]byte{writeReg, register + byte(i)}, nil); err != nil {
 			return &IOError{"setting virtual register", err}
 		}
+
+		//time.Sleep(time.Millisecond*2)
+		//time.Sleep(time.Microsecond*200)
 
 		// Check if read buffer is ready.
 		if err := d.pollStatus(ctx, reading); err != nil {
@@ -391,7 +399,7 @@ func (d *Dev) pollDataReady(ctx context.Context) error {
 			return nil
 		}
 		select {
-		case <-time.After(5 * time.Millisecond):
+		case <-time.After(1 * time.Millisecond):
 			// Polling interval.
 		case <-timeout.C:
 			// Return error if it takes too long.
@@ -464,7 +472,7 @@ func (d *Dev) pollStatus(ctx context.Context, dir direction) error {
 		}
 
 		select {
-		case <-time.After(5 * time.Millisecond):
+		case <-time.After(1 * time.Millisecond):
 			// Polling interval.
 		case <-timeout.C:
 			// Return error if it takes too long.
