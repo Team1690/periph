@@ -227,9 +227,9 @@ func (d *Dev) Sense(ledDrive physic.ElectricCurrent, senseTime time.Duration) (S
 			{Wavelength: 650 * physic.NanoMetre, Counts: r, Value: rcal, Name: "R"},
 		},
 		//SensorTemperature: temperature,
-		Gain:              d.gain,
-		LedDrive:          drive,
-		Integration:       integration,
+		Gain:        d.gain,
+		LedDrive:    drive,
+		Integration: integration,
 	}, nil
 }
 
@@ -311,7 +311,7 @@ func (d *Dev) writeVirtualRegister(ctx context.Context, register, data byte) err
 		return err
 	}
 
-	time.Sleep(time.Microsecond*200)
+	time.Sleep(time.Microsecond * 200)
 
 	// Set virtual register that is being written to.
 	if err := d.c.Tx([]byte{writeReg, register | 0x80}, nil); err != nil {
@@ -322,7 +322,7 @@ func (d *Dev) writeVirtualRegister(ctx context.Context, register, data byte) err
 	if err := d.pollStatus(ctx, writing); err != nil {
 		return err
 	}
-	time.Sleep(time.Microsecond*200)
+	time.Sleep(time.Microsecond * 200)
 
 	// Write data to register that is being written to.
 	if err := d.c.Tx([]byte{writeReg, data}, nil); err != nil {
@@ -343,16 +343,11 @@ func (d *Dev) readVirtualRegister(ctx context.Context, register byte, data []byt
 		if err := d.pollStatus(ctx, clearBuffer); err != nil {
 			return err
 		}
-		//time.Sleep(time.Millisecond*2)
-		//time.Sleep(time.Microsecond*200)
 
 		// Set virtual register that is being read from plus offset.
 		if err := d.c.Tx([]byte{writeReg, register + byte(i)}, nil); err != nil {
 			return &IOError{"setting virtual register", err}
 		}
-
-		//time.Sleep(time.Millisecond*2)
-		//time.Sleep(time.Microsecond*200)
 
 		// Check if read buffer is ready.
 		if err := d.pollStatus(ctx, reading); err != nil {
